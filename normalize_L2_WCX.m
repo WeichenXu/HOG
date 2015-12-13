@@ -6,5 +6,9 @@ function v_normalized = normalize_L2_WCX(v)
 v_normalized = v;
 v = v.^2;
 divide = sqrt(sum(v));
-v_normalized = v_normalized/divide;
+if divide == 0
+    v_normalized = v;
+else
+    v_normalized = v_normalized/divide;
+end
 end
