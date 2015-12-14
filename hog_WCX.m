@@ -6,6 +6,7 @@
 % Bin = 9, Normal_Method = L2
 % hogs: computed hog features
 function hogs = hog_WCX(I)
+I = cut_and_convert_WCX(I);
 %testImage =[ '.\' 'test' '.bmp'];
 %I = double(imread(testImage)); % to double for calculation accuracy
 cellW = 8; cellH = 8;
@@ -41,17 +42,17 @@ end
 % initialize cells
 cells = zeros(rows/cellH, cols/cellW, 9);
 % accumulate histogram in cell for each point
-for i = 0:rows/cellH-1
-    for j = 0:cols/cellW-1
-        for k = 1:cellH
-            for m = 1:cellW
+for j = 0:cols/cellW-1
+    for i = 0:rows/cellH-1
+        for m = 1:cellW
+            for k = 1:cellH
                 % linear interpolation into two bins
                 % except undefined borders
                 if Iangle(i*cellH+k, j*cellW+m) >= 0
                     [sbin,weighted] = bin_interpolate_WCX(Iangle(i*cellH+k, j*cellW+m), binWidth, -1);
                     cells(i+1, j+1, sbin) = cells(i+1, j+1, sbin) + weighted*Im(i*cellH+k, j*cellW+m);
                     [lbin,weighted] = bin_interpolate_WCX(Iangle(i*cellH+k, j*cellW+m), binWidth, 1);
-                    cells(i+1, j+1, lbin) = cells(i+1, j+1, sbin) + weighted*Im(i*cellH+k, j*cellW+m);
+                    cells(i+1, j+1, lbin) = cells(i+1, j+1, lbin) + weighted*Im(i*cellH+k, j*cellW+m);
                 end
             end
         end

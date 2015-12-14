@@ -2,14 +2,16 @@
 % train and test by linear classifier
 % Author: Weichen Xu
 % Date: 12/13/2015
+function main()
 clc;
 clear;
 %% Read pos&neg dir, compute HOG features
 % read dir
-train_pos_dir_path = '.\Images_P2\Training Set\Positive Samples';
-train_neg_dir_path = '.\Images_P2\Training Set\Negative Samples';
-test_pos_dir_path = '.\Images_P2\Testing Set\Positive Samples';
-test_neg_dir_path = '.\Images_P2\Testing Set\Negative Samples';
+images_dir = uigetdir('./');
+train_pos_dir_path = [images_dir '\Training Set\Positive Samples'];
+train_neg_dir_path = [images_dir '\Training Set\Negative Samples'];
+test_pos_dir_path =  [images_dir '\Testing Set\Positive Samples'];
+test_neg_dir_path =  [images_dir '\Testing Set\Negative Samples'];
 train_pos_dir = dir(train_pos_dir_path);
 train_neg_dir = dir(train_neg_dir_path);
 test_pos_dir = dir(test_pos_dir_path);
@@ -60,12 +62,10 @@ fprintf('Writing Euclidean distance to file:%s finished!\n', txtFileName);
 fclose(fileID);
 
 %% Linear classifier training
-% append row of 1s to last of feature as w*a+d*1
-train_hog_features(end+1,:) = ones;
 % init and set attributes of lienar classifier
 [r, c] = size(train_hog_features);
 w = zeros(r,1).';
-linearClassifier = linear_classifier_WCX (w, 0.01);
+linearClassifier = linear_classifier_WCX (w, 1);
 %linearClassifier.W = w;
 %linearClassifier.alpha = 0.1;
 linearClassifier = linearClassifier.linear_training_WCX(train_hog_features(:,train_labels==1), train_hog_features(:,train_labels==-1));
@@ -88,6 +88,25 @@ for i=3:test_neg_num
     test_hog_features = [test_hog_features, I_hog];
     fprintf('No.%d negative testing hog computation finished\n',i-2);
 end
-%% append ones at last row & test the linear classifier
-test_hog_features(end+1,:) = ones;
+%% test the linear classifier
+% in predict_labels, 1 for classify as human, -1 otherwise
 predict_labels = linearClassifier.linear_predict_WCX(test_hog_features);
+% output predict_labels to a file
+txtFileName = 'testing_set_predict_results.txt';
+fileID = fopen(txtFileName, 'w');
+[test_set_size, ~] = size(predict_labels);
+for i=1:test_set_size
+    if i<=test_pos_num-2
+        fprintf(fileID, sprintf('Filename:%s Positive ', test_pos_dir(i+2).name)); 
+    else
+        fprintf(fileID, sprintf('Filename:%s Positive ', test_neg_dir(i-test_pos_num+4).name)); 
+    end
+    if predict_labels(i)>0
+        fprintf(fileID, sprintf('Predict result: Positive\n'));
+    else
+        fprintf(fileID, sprintf('Predict result: Negative\n'));
+    end
+end
+fprintf('Writing prediction results to file:%s finished!\n', txtFileName);
+fclose(fileID);
+end

@@ -19,8 +19,12 @@ classdef linear_classifier_WCX < handle
             %% init trainging set & training labels
             % positive: 1, negative: -1
             w = obj.W;
+            w = [w, 1];
             [~,pos_size] = size(pos);
             [~,neg_size] = size(neg);
+            % append row of 1s to last of feature as w*a+d*1
+            pos(end+1,:) = ones;
+            neg(end+1,:) = ones;
             Labels = zeros(pos_size+neg_size,1);
             Labels(1:pos_size,:) = 1;
             Labels(pos_size+1:pos_size+neg_size, :) = -1;
@@ -45,6 +49,8 @@ classdef linear_classifier_WCX < handle
         
         % input: feature matrix, v*n by row size = vector size
         function predict_labels = linear_predict_WCX(obj, testing)
+            % append 1s to end row of testing
+            testing(end+1, :) = ones;
             predict_labels = testing.'*(obj.W)';
             predict_labels(predict_labels>0,:) = ones;
             predict_labels(predict_labels<0,:) = -ones;
