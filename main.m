@@ -26,7 +26,7 @@ for i=3:train_pos_num
     train_hog_features = [train_hog_features, I_hog];
     % set training label to 1 for positive
     train_labels = [train_labels 1];
-    fprintf('%d positive training hog computation finished\n',i-2);
+    fprintf('No.%d positive training hog computation finished\n',i-2);
 end
 % read starting at 3 to exclude '.' & '..' in neg dir
 for i=3:train_neg_num
@@ -35,7 +35,7 @@ for i=3:train_neg_num
     train_hog_features = [train_hog_features, I_hog];
     % set training label to 1 for positive
     train_labels = [train_labels -1];
-    fprintf('%d negative training hog computation finished\n',i-2);
+    fprintf('No.%d negative training hog computation finished\n',i-2);
 end
 %% Compute mean descriptor for pos & neg, then calculate distance between each sample to corresponding mean
 % compute mean descriptor
@@ -45,3 +45,49 @@ mean_neg_hog = mean(train_hog_features(:,train_labels==-1),2);
 pos_euc_dis = sqrt(sum((train_hog_features(:,train_labels==1) - repmat(mean_pos_hog, 1, train_pos_num-2)).^2));
 neg_euc_dis = sqrt(sum((train_hog_features(:,train_labels==-1) - repmat(mean_neg_hog, 1, train_pos_num-2)).^2));
 %% Output to file, here I write to training_set_euclidean_dis.txt
+txtFileName = 'training_set_euclidean_dis.txt';
+fileID = fopen(txtFileName, 'w');
+[~, train_set_size] = size(train_labels);
+for i=1:train_set_size
+    % write pos/neg, image_name, distance
+    if train_labels(i) == 1
+        fprintf(fileID, sprintf('Filename:%s Positive Euclidean_distance:%f\n', train_pos_dir(i+2).name, pos_euc_dis(i))); 
+    else
+        fprintf(fileID, sprintf('Filename:%s Negative Euclidean_distance:%f\n', train_neg_dir(i-train_pos_num+4).name, neg_euc_dis(i-train_pos_num+2))); 
+    end
+end
+fprintf('Writing Euclidean distance to file:%s finished!\n', txtFileName);
+fclose(fileID);
+
+%% Linear classifier training
+% append row of 1s to last of feature as w*a+d*1
+train_hog_features(end+1,:) = ones;
+% init and set attributes of lienar classifier
+[r, c] = size(train_hog_features);
+w = zeros(r,1).';
+linearClassifier = linear_classifier_WCX (w, 0.01);
+%linearClassifier.W = w;
+%linearClassifier.alpha = 0.1;
+linearClassifier = linearClassifier.linear_training_WCX(train_hog_features(:,train_labels==1), train_hog_features(:,train_labels==-1));
+predict_labels_for_train = linearClassifier.linear_predict_WCX(train_hog_features);
+%% extract features of testing set 
+test_hog_features = [];
+% read starting at 3 to exclude '.' & '..' in pos dir
+[test_pos_num,~] = size(test_pos_dir);
+[test_neg_num,~] = size(test_neg_dir);
+for i=3:test_pos_num
+    I = imread([test_pos_dir_path '\' test_pos_dir(i).name]);
+    I_hog = hog_WCX(double(I));
+    test_hog_features = [test_hog_features, I_hog];
+    fprintf('No.%d positive testing hog computation finished\n',i-2);
+end
+% read starting at 3 to exclude '.' & '..' in neg dir
+for i=3:test_neg_num
+    I = imread([test_neg_dir_path '\' test_neg_dir(i).name]);
+    I_hog = hog_WCX(double(I));
+    test_hog_features = [test_hog_features, I_hog];
+    fprintf('No.%d negative testing hog computation finished\n',i-2);
+end
+%% append ones at last row & test the linear classifier
+test_hog_features(end+1,:) = ones;
+predict_labels = linearClassifier.linear_predict_WCX(test_hog_features);
