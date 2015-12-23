@@ -5,8 +5,10 @@
 % CellSize = 8*8, BlockSize = 2*2 cells, Overlapping = 8, 
 % Bin = 9, Normal_Method = L2
 % hogs: computed hog features
-function hogs = hog_WCX(I)
-I = cut_and_convert_WCX(I);
+% file_name: output to file_name_hog.txt
+function hogs = hog_WCX(file_name, write_mode)
+I = imread(file_name);
+I = double(cut_and_convert_WCX(I));
 %testImage =[ '.\' 'test' '.bmp'];
 %I = double(imread(testImage)); % to double for calculation accuracy
 cellW = 8; cellH = 8;
@@ -63,8 +65,8 @@ end
 blocks_rows = (rows - blockH*cellH)/stride+1;
 blocks_cols = (cols - blockW*cellW)/stride+1;
 % get each block feature by  concatenate corresponding cells, Row Major
-for i=1:blocks_cols
-    for j=1:blocks_rows
+for j=1:blocks_rows
+    for i=1:blocks_cols    
         block_hog = [];
         for k=1:blockW
             for m=1:blockH
@@ -74,6 +76,11 @@ for i=1:blocks_cols
         % normalize each block
         hogs = [hogs, normalize_L2_WCX(block_hog)];
     end
+end
+%% write to a txt file if write_mode == 1
+[~, name, ~] = fileparts(file_name);
+if write_mode == 1
+    write2file_WCX(hogs, ['./output/hog_features/' name '.txt']);
 end
 %% reshpae the hogs to one dimentional
 [hogsR, hogsC] = size(hogs);

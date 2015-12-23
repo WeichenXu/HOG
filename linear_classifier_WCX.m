@@ -32,7 +32,9 @@ classdef linear_classifier_WCX < handle
             %% set training falg and start training
             train_finish = false;
             fprintf('Linear classifier start training\n');
+            iteration = 0;
             while ~train_finish
+                iteration = iteration + 1;
                 train_finish = true;
                 for i = 1:pos_size+neg_size
                     if Labels(i, 1)*w*Training_set(:,i) <= 0
@@ -42,7 +44,7 @@ classdef linear_classifier_WCX < handle
                     end
                 end
             end
-            fprintf('Linear classifier training finished\n');
+            fprintf('Linear classifier training finished, %d iterations\n', iteration);
             obj.W = w;
         end
         % linear predict

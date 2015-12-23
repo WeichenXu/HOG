@@ -16,6 +16,10 @@ train_pos_dir = dir(train_pos_dir_path);
 train_neg_dir = dir(train_neg_dir_path);
 test_pos_dir = dir(test_pos_dir_path);
 test_neg_dir = dir(test_neg_dir_path);
+% make dir for output
+mkdir('./output');
+mkdir('./output/mean_descripter');
+mkdir('./output/hog_features')
 % for each image, compute HOG
 train_hog_features = [];
 train_labels = [];
@@ -23,8 +27,7 @@ train_labels = [];
 [train_neg_num,~] = size(train_neg_dir);
 % read starting at 3 to exclude '.' & '..' in pos dir
 for i=3:train_pos_num
-    I = imread([train_pos_dir_path '\' train_pos_dir(i).name]);
-    I_hog = hog_WCX(double(I));
+    I_hog = hog_WCX([train_pos_dir_path '\' train_pos_dir(i).name], 1);
     train_hog_features = [train_hog_features, I_hog];
     % set training label to 1 for positive
     train_labels = [train_labels 1];
@@ -32,8 +35,7 @@ for i=3:train_pos_num
 end
 % read starting at 3 to exclude '.' & '..' in neg dir
 for i=3:train_neg_num
-    I = imread([train_neg_dir_path '\' train_neg_dir(i).name]);
-    I_hog = hog_WCX(double(I));
+    I_hog = hog_WCX([train_neg_dir_path '\' train_neg_dir(i).name],1);
     train_hog_features = [train_hog_features, I_hog];
     % set training label to 1 for positive
     train_labels = [train_labels -1];
@@ -43,6 +45,9 @@ end
 % compute mean descriptor
 mean_pos_hog = mean(train_hog_features(:,train_labels==1),2);
 mean_neg_hog = mean(train_hog_features(:,train_labels==-1),2);
+% reshape & write them to a txt file
+write2file_WCX(reshape(mean_pos_hog, 36, []), './output/mean_descripter/mean_pos.txt');
+write2file_WCX(reshape(mean_neg_hog, 36, []), './output/mean_descripter/mean_neg.txt');
 % compute corresponding Euclidean distance
 pos_euc_dis = sqrt(sum((train_hog_features(:,train_labels==1) - repmat(mean_pos_hog, 1, train_pos_num-2)).^2));
 neg_euc_dis = sqrt(sum((train_hog_features(:,train_labels==-1) - repmat(mean_neg_hog, 1, train_pos_num-2)).^2));
@@ -53,9 +58,9 @@ fileID = fopen(txtFileName, 'w');
 for i=1:train_set_size
     % write pos/neg, image_name, distance
     if train_labels(i) == 1
-        fprintf(fileID, sprintf('Filename:%s Positive Euclidean_distance:%f\n', train_pos_dir(i+2).name, pos_euc_dis(i))); 
+        fprintf(fileID, sprintf('Filename:%s Positive Euclidean_distance:%.2f\n', train_pos_dir(i+2).name, pos_euc_dis(i))); 
     else
-        fprintf(fileID, sprintf('Filename:%s Negative Euclidean_distance:%f\n', train_neg_dir(i-train_pos_num+4).name, neg_euc_dis(i-train_pos_num+2))); 
+        fprintf(fileID, sprintf('Filename:%s Negative Euclidean_distance:%.2f\n', train_neg_dir(i-train_pos_num+4).name, neg_euc_dis(i-train_pos_num+2))); 
     end
 end
 fprintf('Writing Euclidean distance to file:%s finished!\n', txtFileName);
@@ -64,10 +69,10 @@ fclose(fileID);
 %% Linear classifier training
 % init and set attributes of lienar classifier
 [r, c] = size(train_hog_features);
-w = zeros(r,1).';
+w = ones(r,1).';
 linearClassifier = linear_classifier_WCX (w, 1);
-%linearClassifier.W = w;
-%linearClassifier.alpha = 0.1;
+linearClassifier.W = w;
+linearClassifier.alpha = 1;
 linearClassifier = linearClassifier.linear_training_WCX(train_hog_features(:,train_labels==1), train_hog_features(:,train_labels==-1));
 predict_labels_for_train = linearClassifier.linear_predict_WCX(train_hog_features);
 %% extract features of testing set 
@@ -76,15 +81,13 @@ test_hog_features = [];
 [test_pos_num,~] = size(test_pos_dir);
 [test_neg_num,~] = size(test_neg_dir);
 for i=3:test_pos_num
-    I = imread([test_pos_dir_path '\' test_pos_dir(i).name]);
-    I_hog = hog_WCX(double(I));
+    I_hog = hog_WCX([test_pos_dir_path '\' test_pos_dir(i).name],1);
     test_hog_features = [test_hog_features, I_hog];
     fprintf('No.%d positive testing hog computation finished\n',i-2);
 end
 % read starting at 3 to exclude '.' & '..' in neg dir
 for i=3:test_neg_num
-    I = imread([test_neg_dir_path '\' test_neg_dir(i).name]);
-    I_hog = hog_WCX(double(I));
+    I_hog = hog_WCX([test_neg_dir_path '\' test_neg_dir(i).name],1);
     test_hog_features = [test_hog_features, I_hog];
     fprintf('No.%d negative testing hog computation finished\n',i-2);
 end
@@ -99,7 +102,7 @@ for i=1:test_set_size
     if i<=test_pos_num-2
         fprintf(fileID, sprintf('Filename:%s Positive ', test_pos_dir(i+2).name)); 
     else
-        fprintf(fileID, sprintf('Filename:%s Positive ', test_neg_dir(i-test_pos_num+4).name)); 
+        fprintf(fileID, sprintf('Filename:%s Negative ', test_neg_dir(i-test_pos_num+4).name)); 
     end
     if predict_labels(i)>0
         fprintf(fileID, sprintf('Predict result: Positive\n'));
